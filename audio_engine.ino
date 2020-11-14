@@ -17,12 +17,15 @@ void setup()
  
 void loop()
 {
-  playSine(100, 1000);
-//    dacWrite(26, SineValues[sineCounter]);
-//    sineCounter++;
-//    if (sineCounter > tableSize) sineCounter -= tableSize;
-//    delayMicroseconds(125);
-  playSine(300, 2000);
+  playSine(261.63, 500); //C4
+  playSine(293.66, 500); //D4
+  playSine(329.63, 500); //E4
+  playSine(349.23, 500); //F4
+  playSine(392.00, 500); //G4
+  playSine(440.00, 500); //A4
+  playSine(493.88, 500); //B4
+  playSine(523.25, 500); //C5
+
 }
 
 void playSine(float freq, float len){
