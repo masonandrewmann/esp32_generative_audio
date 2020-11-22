@@ -6,6 +6,7 @@ int sineCounter = 0;
 
 float outputVal = 0;
 int usTime = 0;
+int zeroCounter = 0;
 
 class SinOsc {
   //wavetable oscillator with linear interpolation
@@ -53,6 +54,7 @@ class SinOsc {
   
 void setup()
 {
+  Serial.begin(115200);
   // calculate sine values
   float RadAngle;                           // Angle in Radians
   for(int MyAngle=0;MyAngle<tableSize;MyAngle++) {
@@ -63,18 +65,21 @@ void setup()
  
 void loop()
 {
+  Serial.println(zeroCounter);
   if ( micros() > usTime){
     //reset output value
     outputVal = 0;
   
     //cycle oscillators
     myOsc.cycle();
-    myOsc2.cycle();
+//    myOsc2.cycle();
   
     //write output to pin
     outputVal += 128;
-    if (outputVal < 0) outputVal = 0;
-    else if (outputVal > 255) outputVal = 255;
+    if (outputVal < 0) {
+      outputVal = 0;
+      zeroCounter++;
+    } else if (outputVal > 255) outputVal = 255;
     dacWrite(26, outputVal);
 
     
@@ -89,23 +94,23 @@ void loop()
     myOsc.freq = 293.66;
   }
 
-  if ((millis() % 2000) < 250) {
-    myOsc2.freq = 440;
-  } else if ((millis() % 2000) < 500){
-    myOsc2.freq = 554.37;
-  } else if ((millis() % 2000) < 750){
-    myOsc2.freq = 659.25;
-  } else if ((millis() % 2000) < 1000){
-    myOsc2.freq = 554.37;
-  } else if ((millis() % 2000) < 1250){
-    myOsc2.freq = 440;
-  } else if ((millis() % 2000) < 1500){
-    myOsc2.freq = 587.33;
-  } else if ((millis() % 2000) < 1750){
-    myOsc2.freq = 739.99;
-  } else {
-    myOsc2.freq = 587.33;
-  }
+//  if ((millis() % 2000) < 250) {
+//    myOsc2.freq = 440;
+//  } else if ((millis() % 2000) < 500){
+//    myOsc2.freq = 554.37;
+//  } else if ((millis() % 2000) < 750){
+//    myOsc2.freq = 659.25;
+//  } else if ((millis() % 2000) < 1000){
+//    myOsc2.freq = 554.37;
+//  } else if ((millis() % 2000) < 1250){
+//    myOsc2.freq = 440;
+//  } else if ((millis() % 2000) < 1500){
+//    myOsc2.freq = 587.33;
+//  } else if ((millis() % 2000) < 1750){
+//    myOsc2.freq = 739.99;
+//  } else {
+//    myOsc2.freq = 587.33;
+//  }
   
 }
 
