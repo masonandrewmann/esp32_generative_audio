@@ -5,6 +5,7 @@ int SineValues[tableSize];       // an array to store our values for sine
 int sineCounter = 0;
 
 float outputVal = 0;
+float usInc = 6;
 int usTime = 0;
 int zeroCounter = 0;
 
@@ -28,6 +29,7 @@ class SinOsc {
 
     void cycle(){
         pointerInc = tableSize * (freq / sampleHz);
+//        println(pointerInc);
          if ((pointerVal - floor(pointerVal)) == 0){                //if pointerVal lands on an integer index use it
         outVal = SineValues[(int)pointerVal];
         } else {                               //if pointerVal lands between integer indexes, linearly interpolate the between adjacent samples
@@ -46,12 +48,14 @@ class SinOsc {
 };
 
 //make a test oscillator
-  SinOsc myOsc(220, 0.3);
-  SinOsc myOsc2(277.18, 0.2);
+  SinOsc myOsc(440, 0.6);
+  SinOsc myOsc2(554.37, 0.3);
   
 void setup()
 {
 //  Serial.begin(115200);
+
+  usInc = (1.0 / sampleHz) * pow(10, 6);
   // calculate sine values
   float RadAngle;                           // Angle in Radians
   for(int MyAngle=0;MyAngle<tableSize;MyAngle++) {
@@ -62,7 +66,6 @@ void setup()
  
 void loop()
 {
-//  Serial.println(zeroCounter);
   if ( micros() > usTime){
     //reset output value
     outputVal = 0;
@@ -79,18 +82,17 @@ void loop()
     } else if (outputVal > 255) outputVal = 255;
     dacWrite(26, outputVal);
 
-    
-    usTime = micros() + 125;
+    usTime = micros() + usInc;
   }
 
 
   //sequence frequencies
-  if ((millis() % 2000) > 1000) {
-    myOsc.freq = 220;
-  } else {
-    myOsc.freq = 293.66;
-  }
-
+//  if ((millis() % 2000) > 1000) {
+//    myOsc.freq = 220;
+//  } else {
+//    myOsc.freq = 293.66;
+//  }
+//
 //  if ((millis() % 2000) < 250) {
 //    myOsc2.freq = 440;
 //  } else if ((millis() % 2000) < 500){
