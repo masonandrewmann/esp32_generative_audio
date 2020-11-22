@@ -23,28 +23,24 @@ class SinOsc {
     SinOsc(float freq, float mul){
       this->freq = freq;
       this->mul = mul;
-      pointerInc = 1024 * (freq / 8000);
-    }
-
-    void calc(){
-      if ((pointerVal - floor(pointerVal)) == 0){                //if pointerVal lands on an integer index use it
-      outVal = SineValues[(int)pointerVal];
-      } else {                               //if pointerVal lands between integer indexes, linearly interpolate the between adjacent samples
-      int lower = SineValues[(int)floor(pointerVal)];                        //sample on lower side
-      int upper = SineValues[(int)ceil(pointerVal)];                        //sample on higher side
-      float rem = (pointerVal - floor(pointerVal));
-      outVal = lower + (rem) * (upper - lower);
-      }
-//      dacWrite(26, outVal * mul);
-      outputVal = outputVal + mul * (outVal - 128);
-      
-      pointerVal += pointerInc;
-      if(pointerVal > tableSize) pointerVal -= tableSize;
+      pointerInc = tableSize * (freq / sampleHz);
     }
 
     void cycle(){
-        pointerInc = 1024 * (freq / 8000);
-        calc();
+        pointerInc = tableSize * (freq / sampleHz);
+         if ((pointerVal - floor(pointerVal)) == 0){                //if pointerVal lands on an integer index use it
+        outVal = SineValues[(int)pointerVal];
+        } else {                               //if pointerVal lands between integer indexes, linearly interpolate the between adjacent samples
+        int lower = SineValues[(int)floor(pointerVal)];                        //sample on lower side
+        int upper = SineValues[(int)ceil(pointerVal)];                        //sample on higher side
+        float rem = (pointerVal - floor(pointerVal));
+        outVal = lower + (rem) * (upper - lower);
+        }
+  //      dacWrite(26, outVal * mul);
+        outputVal = outputVal + mul * (outVal - 128);
+        
+        pointerVal += pointerInc;
+        if(pointerVal > tableSize) pointerVal -= tableSize;
     }
 };
 
@@ -54,7 +50,7 @@ class SinOsc {
   
 void setup()
 {
-  Serial.begin(115200);
+//  Serial.begin(115200);
   // calculate sine values
   float RadAngle;                           // Angle in Radians
   for(int MyAngle=0;MyAngle<tableSize;MyAngle++) {
@@ -65,7 +61,7 @@ void setup()
  
 void loop()
 {
-  Serial.println(zeroCounter);
+//  Serial.println(zeroCounter);
   if ( micros() > usTime){
     //reset output value
     outputVal = 0;
@@ -76,9 +72,9 @@ void loop()
   
     //write output to pin
     outputVal += 128;
+    if (outputVal == 0)       zeroCounter++;
     if (outputVal < 0) {
       outputVal = 0;
-      zeroCounter++;
     } else if (outputVal > 255) outputVal = 255;
     dacWrite(26, outputVal);
 
