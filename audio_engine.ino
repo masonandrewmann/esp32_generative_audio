@@ -36,6 +36,7 @@ class SinOsc {
         float rem = (pointerVal - floor(pointerVal));
         outVal = lower + (rem) * (upper - lower);
         }
+        outVal = SineValues[(int)pointerVal];
   //      dacWrite(26, outVal * mul);
         outputVal = outputVal + mul * (outVal - 128);
         
