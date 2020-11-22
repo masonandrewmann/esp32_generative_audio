@@ -1,5 +1,5 @@
 #define tableSize 1024
-#define sampleRate 8000
+#define sampleHz 8000
 
 int SineValues[tableSize];       // an array to store our values for sine
 int sineCounter = 0;
@@ -48,3 +48,35 @@ void playSine(float freq, float len){
     delayMicroseconds(125);
   }
 }
+
+//class SinOsc {
+//  //wavetable oscillator with linear interpolation
+//  //1024 samples played at sample rate of 8000Hz
+//  private:
+//    float usTime;
+//    float pointerInc;
+//    float pointerVal = 0;
+//    
+//  public:
+//    float freq;
+//    float mul;
+//    int outVal;
+//    
+//    SinOsc(float freq, float mul){
+//      this->freq = freq;
+//      this->mul = mul;
+//      pointerInc = 1024 * (freq / 8000);
+//    }
+//
+//    void calc(){
+//      if ((pointerVal - floor(pointerVal)) == 0){                //if pointerVal lands on an integer index use it
+//      outVal = SineValues[(int)pointerVal];
+//    } else {                               //if pointerVal lands between integer indexes, linearly interpolate the between adjacent samples
+//      int lower = SineValues[(int)floor(pointerVal)];                        //sample on lower side
+//      int upper = SineValues[(int)ceil(pointerVal)];                        //sample on higher side
+//      float rem = (pointerVal - floor(pointerVal));
+//      outVal = lower + (rem) * (upper - lower);
+//    }
+//    }
+//    
+//}
