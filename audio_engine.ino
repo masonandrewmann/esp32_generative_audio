@@ -4,6 +4,55 @@
 int SineValues[tableSize];       // an array to store our values for sine
 int sineCounter = 0;
 
+float outputVal = 0;
+
+class SinOsc {
+  //wavetable oscillator with linear interpolation
+  //1024 samples played at sample rate of 8000Hz
+  private:
+    int usTime;
+    float pointerInc;
+    float pointerVal = 0;
+    
+  public:
+    float freq;
+    float mul;
+    int outVal;
+    
+    SinOsc(float freq, float mul){
+      this->freq = freq;
+      this->mul = mul;
+      pointerInc = 1024 * (freq / 8000);
+    }
+
+    void calc(){
+      if ((pointerVal - floor(pointerVal)) == 0){                //if pointerVal lands on an integer index use it
+      outVal = SineValues[(int)pointerVal];
+      } else {                               //if pointerVal lands between integer indexes, linearly interpolate the between adjacent samples
+      int lower = SineValues[(int)floor(pointerVal)];                        //sample on lower side
+      int upper = SineValues[(int)ceil(pointerVal)];                        //sample on higher side
+      float rem = (pointerVal - floor(pointerVal));
+      outVal = lower + (rem) * (upper - lower);
+      }
+      dacWrite(26, SineValues[(int)pointerVal] * mul);
+      pointerVal += pointerInc;
+      if(pointerVal > tableSize) pointerVal -= tableSize;
+    }
+
+    void cycle(){
+//      Serial.println(micros());
+      if ( micros() > usTime){
+        pointerInc = 1024 * (freq / 8000);
+        calc();
+        usTime = micros() + 125;
+      }
+    }
+};
+
+//make a test oscillator
+  SinOsc myOsc(440, 1);
+  SinOsc myOsc2(
+  
 void setup()
 {
 //  Serial.begin(9600);
@@ -17,19 +66,37 @@ void setup()
  
 void loop()
 {
-  playSine(261.63, 500); //C4
-  playSine(293.66, 500); //D4
-  playSine(329.63, 500); //E4
-  playSine(349.23, 500); //F4
-  playSine(392.00, 500); //G4
-  playSine(440.00, 500); //A4
-  playSine(493.88, 500); //B4
-  playSine(523.25, 500); //C5
 
+  myOsc.cycle();
+  if ((millis() % 2000) > 1000) {
+    myOsc.freq = 220;
+  } else {
+    myOsc.freq = 293.66;
+  }
+
+//  if ((millis() % 2000) < 250) {
+//    myOsc2.freq = 440;
+//  } else if ((millis() % 2000) < 500){
+//    myOsc2.freq = 554.37;
+//  } else if ((millis() % 2000) < 750){
+//    myOsc2.freq = 659.25;
+//  } else if ((millis() % 2000) < 1000){
+//    myOsc2.freq = 554.37;
+//  } else if ((millis() % 2000) < 1250){
+//    myOsc2.freq = 440;
+//  } else if ((millis() % 2000) < 1500){
+//    myOsc2.freq = 587.33;
+//  } else if ((millis() % 2000) < 1750){
+//    myOsc2.freq = 698.46;
+//  } else {
+//    myOsc2.freq = 587.33;
+//  }
+  
+//  Serial.println(myOsc.freq);
 }
 
 void playSine(float freq, float len){
-  float pointerInc = 1024 * (freq / 8000); //set pointer to increment to generate desired frequency S = N * (f/Fs) 
+  float pointerInc = tableSize * (freq / sampleHz); //set pointer to increment to generate desired frequency S = N * (f/Fs) 
   float pointerVal = 0;
   int goalTime = millis() + len;           //length of tone to be played
   while (millis() < goalTime){             //check if length has been reached
@@ -44,39 +111,7 @@ void playSine(float freq, float len){
     }
     dacWrite(26, SineValues[(int)pointerVal]);
     pointerVal += pointerInc;
-    if(pointerVal > 1024) pointerVal -= 1024;
+    if(pointerVal > tableSize) pointerVal -= tableSize;
     delayMicroseconds(125);
   }
 }
-
-//class SinOsc {
-//  //wavetable oscillator with linear interpolation
-//  //1024 samples played at sample rate of 8000Hz
-//  private:
-//    float usTime;
-//    float pointerInc;
-//    float pointerVal = 0;
-//    
-//  public:
-//    float freq;
-//    float mul;
-//    int outVal;
-//    
-//    SinOsc(float freq, float mul){
-//      this->freq = freq;
-//      this->mul = mul;
-//      pointerInc = 1024 * (freq / 8000);
-//    }
-//
-//    void calc(){
-//      if ((pointerVal - floor(pointerVal)) == 0){                //if pointerVal lands on an integer index use it
-//      outVal = SineValues[(int)pointerVal];
-//    } else {                               //if pointerVal lands between integer indexes, linearly interpolate the between adjacent samples
-//      int lower = SineValues[(int)floor(pointerVal)];                        //sample on lower side
-//      int upper = SineValues[(int)ceil(pointerVal)];                        //sample on higher side
-//      float rem = (pointerVal - floor(pointerVal));
-//      outVal = lower + (rem) * (upper - lower);
-//    }
-//    }
-//    
-//}
