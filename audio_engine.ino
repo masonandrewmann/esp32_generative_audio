@@ -1,7 +1,7 @@
-#define tableSize 1024
-#define sampleHz 8000
+#define TABLESIZE 1024
+#define SAMPLEHZ 8000
 
-int SineValues[tableSize];       // an array to store our values for sine
+int SineValues[TABLESIZE];       // an array to store our values for sine
 int sineCounter = 0;
 
 float outputVal = 0;
@@ -55,14 +55,15 @@ class SinOsc {
     float mul;
     int outVal;
     
-    SinOsc(float freq, float mul){
+    SinOsc(float freq, float phase, float mul){
       this->freq = freq;
       this->mul = mul;
-      pointerInc = tableSize * (freq / sampleHz);
+      pointerInc = TABLESIZE * (freq / SAMPLEHZ);
+      pointerVal = map(phase, 0, TWO_PI, 0, TABLESIZE - 1);
     }
 
     void cycle(){
-        pointerInc = tableSize * (freq / sampleHz);
+        pointerInc = TABLESIZE * (freq / SAMPLEHZ);
 //        println(pointerInc);
          if ((pointerVal - floor(pointerVal)) == 0){                //if pointerVal lands on an integer index use it
         outVal = SineValues[(int)pointerVal];
@@ -76,13 +77,15 @@ class SinOsc {
         outputVal = outputVal + mul * (outVal - 128);
         
         pointerVal += pointerInc;
-        if(pointerVal > tableSize) pointerVal -= tableSize;
+        if(pointerVal > TABLESIZE) pointerVal -= TABLESIZE;
     }
 };
 
 //make a test oscillator
-  SinOsc myOsc(220, 0.6);
-  SinOsc myOsc2(554.37, 0.3);
+  SinOsc myOsc(220, 1, 0.6);
+  SinOsc myOsc2(554.37, 1, 0.3);
+
+//  SinOscs
   
 void setup()
 {
@@ -104,7 +107,7 @@ void setup()
 
   // Set alarm to call onTimerAr function every second (value in microseconds).
   // Repeat the alarm (third parameter)
-  timerAlarmWrite(timerAr, (1.0 / sampleHz) * pow(10, 6), true); //poll at sample rate
+  timerAlarmWrite(timerAr, (1.0 / SAMPLEHZ) * pow(10, 6), true); //poll at sample rate
   timerAlarmWrite(timerKr, (1.0 / 100) * pow(10, 6), true);      // 125Hz control rate
 
   // Start an alarm
@@ -113,8 +116,8 @@ void setup()
 
   // calculate sine values
   float RadAngle;                           // Angle in Radians
-  for(int MyAngle=0;MyAngle<tableSize;MyAngle++) {
-    RadAngle=MyAngle*(2*PI)/tableSize;               // angle converted to radians
+  for(int MyAngle=0;MyAngle<TABLESIZE;MyAngle++) {
+    RadAngle=MyAngle*(2*PI)/TABLESIZE;               // angle converted to radians
     SineValues[MyAngle]=(sin(RadAngle)*127)+128;  // get the sine of this angle and 'shift' to center around the middle of output voltage range
   }
 }
