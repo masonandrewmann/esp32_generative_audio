@@ -8,24 +8,40 @@ float outputVal = 0;
 float usInc = 6;
 
 // hardware timer stuff from ESP32 RepeatTimer example 
-hw_timer_t * timer = NULL;
-volatile SemaphoreHandle_t timerSemaphore;
+
+hw_timer_t * timerAr = NULL;
+hw_timer_t * timerKr = NULL;
+
+volatile SemaphoreHandle_t timerSemaphoreAr;
+volatile SemaphoreHandle_t timerSemaphoreKr;
+
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 volatile uint32_t isrCounter = 0;
 volatile uint32_t lastIsrAt = 0;
 
-void IRAM_ATTR onTimer(){
+void IRAM_ATTR onTimerAr(){
   // Increment the counter and set the time of ISR
   portENTER_CRITICAL_ISR(&timerMux);
   isrCounter++;
   lastIsrAt = millis();
   portEXIT_CRITICAL_ISR(&timerMux);
   // Give a semaphore that we can check in the loop
-  xSemaphoreGiveFromISR(timerSemaphore, NULL);
+  xSemaphoreGiveFromISR(timerSemaphoreAr, NULL);
   // It is safe to use digitalRead/Write here if you want to toggle an output
 }
 
+
+void IRAM_ATTR onTimerKr(){
+  // Increment the counter and set the time of ISR
+  portENTER_CRITICAL_ISR(&timerMux);
+  isrCounter++;
+  lastIsrAt = millis();
+  portEXIT_CRITICAL_ISR(&timerMux);
+  // Give a semaphore that we can check in the loop
+  xSemaphoreGiveFromISR(timerSemaphoreKr, NULL);
+  // It is safe to use digitalRead/Write here if you want to toggle an output
+}
 
 class SinOsc {
   //wavetable oscillator with linear interpolation
@@ -73,22 +89,27 @@ void setup()
   Serial.begin(115200);
 
   // Create semaphore to inform us when the timer has fired
-  timerSemaphore = xSemaphoreCreateBinary();
+  timerSemaphoreAr = xSemaphoreCreateBinary();
+  timerSemaphoreKr = xSemaphoreCreateBinary();
 
   // Use 1st timer of 4 (counted from zero).
   // Set 80 divider for prescaler (see ESP32 Technical Reference Manual for more
   // info).
-  timer = timerBegin(0, 80, true);
+  timerAr = timerBegin(0, 80, true);
+  timerKr = timerBegin(1, 80, true);
 
-  // Attach onTimer function to our timer.
-  timerAttachInterrupt(timer, &onTimer, true);
+  // Attach onTimerAr function to our timer.
+  timerAttachInterrupt(timerAr, &onTimerAr, true);
+  timerAttachInterrupt(timerKr, &onTimerKr, true);
 
-  // Set alarm to call onTimer function every second (value in microseconds).
+  // Set alarm to call onTimerAr function every second (value in microseconds).
   // Repeat the alarm (third parameter)
-  timerAlarmWrite(timer, (1.0 / sampleHz) * pow(10, 6), true);
+  timerAlarmWrite(timerAr, (1.0 / sampleHz) * pow(10, 6), true); //poll at sample rate
+  timerAlarmWrite(timerKr, (1.0 / 100) * pow(10, 6), true);      // 125Hz control rate
 
   // Start an alarm
-  timerAlarmEnable(timer);
+  timerAlarmEnable(timerAr);
+  timerAlarmEnable(timerKr);
 
   // calculate sine values
   float RadAngle;                           // Angle in Radians
@@ -100,7 +121,8 @@ void setup()
  
 void loop()
 {
-  if (xSemaphoreTake(timerSemaphore, 0) == pdTRUE){
+  //AUDIO RATE CALCULATIONS
+  if (xSemaphoreTake(timerSemaphoreAr, 0) == pdTRUE){
     //reset output value
     outputVal = 0;
   
@@ -116,6 +138,9 @@ void loop()
     dacWrite(26, outputVal);
   }
 
+  //CONTROL RATE CALCULATIONS
+  if (xSemaphoreTake(timerSemaphoreKr, 0) == pdTRUE){
+//    Serial.println("hiiiii");
   int temptime = millis();
   
   //sequence frequencies
@@ -142,5 +167,7 @@ void loop()
   } else {
     myOsc2.freq = 587.33;
   }
+  }
+  
   
 }
