@@ -81,9 +81,33 @@ class SinOsc {
     }
 };
 
-//make a test oscillator
-  SinOsc bass(220, 1, 0.6);
-  SinOsc arp(554.37, 1, 0.3);
+class Sequencer {
+  private:
+    int valPointer;
+    int goalTime;
+  public:
+    float vals[];
+    float dur;
+    float currVal;
+
+    Sequencer(float vals[], float dur){
+      this->vals = vals;
+//      std::vector<float>
+      this->dur = dur;
+      currVal = 0;
+      valPointer = 0;
+      goalTime = 0;
+    }
+
+    void cycle(){
+      int msTime = millis();
+      if (msTime > goalTime){
+        currVal = vals[valPointer];
+        valPointer = (valPointer + 1) % (sizeof(vals) / sizeof(float));
+        goalTime = msTime() + dur;
+      }
+    }
+};
 
 //pattern sequencing
 
@@ -96,6 +120,15 @@ class SinOsc {
   float bassDur = 1000;
   int bassPointer = 0;
   int bassTime = 0;
+  
+//make a test oscillator
+  SinOsc bass(220, 1, 0.6);
+  SinOsc arp(554.37, 1, 0.3);
+
+  Sequencer bassSeq(bassFreq, bassDur);
+  Sequencer arpSeq(arpFreq, arpDur);
+
+
   
 void setup()
 {
@@ -130,6 +163,7 @@ void setup()
     RadAngle=MyAngle*(2*PI)/TABLESIZE;               // angle converted to radians
     SineValues[MyAngle]=(sin(RadAngle)*127)+128;  // get the sine of this angle and 'shift' to center around the middle of output voltage range
   }
+
 }
  
 void loop()
@@ -153,43 +187,25 @@ void loop()
 
   //CONTROL RATE CALCULATIONS
   if (xSemaphoreTake(timerSemaphoreKr, 0) == pdTRUE){
-    int msTime = millis();
-    //sequence bass
-    if (msTime > bassTime){
-      bass.freq = bassFreq[bassPointer];
-      bassPointer = (bassPointer + 1) % (sizeof(bassFreq) / sizeof(float));
-      bassTime = millis() + bassDur;
-    }
+    arpSeq.cycle();
+    bassSeq.cycle();
 
-    //sequence arp
-    if (msTime > arpTime){
-      arp.freq = arpFreq[arpPointer];
-      arpPointer = (arpPointer + 1) % (sizeof(arpFreq) / sizeof(float));
-      arpTime = millis() + arpDur;
-    }
-    //sequence frequencies
-//    if ((temptime % 2000) > 1000) {
-//      myOsc.freq = 220;
-//    } else {
-//      myOsc.freq = 293.66;
+    arp.freq = arpSeq.currVal;
+    bass.freq = bassSeq.currVal;
+    
+//    int msTime = millis();
+//    //sequence bass
+//    if (msTime > bassTime){
+//      bass.freq = bassFreq[bassPointer];
+//      bassPointer = (bassPointer + 1) % (sizeof(bassFreq) / sizeof(float));
+//      bassTime = millis() + bassDur;
 //    }
-//  
-//    if ((temptime % 2000) < 250) {
-//      myOsc2.freq = 440;
-//    } else if ((temptime % 2000) < 500){
-//      myOsc2.freq = 554.37;
-//    } else if ((temptime % 2000) < 750){
-//      myOsc2.freq = 659.25;
-//    } else if ((temptime % 2000) < 1000){
-//      myOsc2.freq = 554.37;
-//    } else if ((temptime % 2000) < 1250){
-//      myOsc2.freq = 440;
-//    } else if ((temptime % 2000) < 1500){
-//      myOsc2.freq = 587.33;
-//    } else if ((temptime % 2000) < 1750){
-//      myOsc2.freq = 739.99;
-//    } else {
-//      myOsc2.freq = 587.33;
+//
+//    //sequence arp
+//    if (msTime > arpTime){
+//      arp.freq = arpFreq[arpPointer];
+//      arpPointer = (arpPointer + 1) % (sizeof(arpFreq) / sizeof(float));
+//      arpTime = millis() + arpDur;
 //    }
   }
   
