@@ -1,5 +1,5 @@
 #define TABLESIZE 1024
-#define SAMPLEHZ 8000
+#define SAMPLEHZ 44100
 
 int SineValues[TABLESIZE];       // an array to store our values for sine
 int sineCounter = 0;
@@ -82,10 +82,20 @@ class SinOsc {
 };
 
 //make a test oscillator
-  SinOsc myOsc(220, 1, 0.6);
-  SinOsc myOsc2(554.37, 1, 0.3);
+  SinOsc bass(220, 1, 0.6);
+  SinOsc arp(554.37, 1, 0.3);
 
-//  SinOscs
+//pattern sequencing
+
+  float arpFreq[] = {440, 554.37, 659.25, 554.37, 440, 587.33, 739.99, 587.33};
+  float arpDur = 250;
+  int arpPointer = 0;
+  int arpTime = 0;
+
+  float bassFreq[] = {220, 293.66};
+  float bassDur = 1000;
+  int bassPointer = 0;
+  int bassTime = 0;
   
 void setup()
 {
@@ -130,8 +140,8 @@ void loop()
     outputVal = 0;
   
     //cycle oscillators
-    myOsc.cycle();
-    myOsc2.cycle();
+    bass.cycle();
+    arp.cycle();
   
     //write output to pin
     outputVal += 128;
@@ -143,33 +153,44 @@ void loop()
 
   //CONTROL RATE CALCULATIONS
   if (xSemaphoreTake(timerSemaphoreKr, 0) == pdTRUE){
-//    Serial.println("hiiiii");
-  int temptime = millis();
-  
-  //sequence frequencies
-  if ((temptime % 2000) > 1000) {
-    myOsc.freq = 220;
-  } else {
-    myOsc.freq = 293.66;
-  }
+    int msTime = millis();
+    //sequence bass
+    if (msTime > bassTime){
+      bass.freq = bassFreq[bassPointer];
+      bassPointer = (bassPointer + 1) % (sizeof(bassFreq) / sizeof(float));
+      bassTime = millis() + bassDur;
+    }
 
-  if ((temptime % 2000) < 250) {
-    myOsc2.freq = 440;
-  } else if ((temptime % 2000) < 500){
-    myOsc2.freq = 554.37;
-  } else if ((temptime % 2000) < 750){
-    myOsc2.freq = 659.25;
-  } else if ((temptime % 2000) < 1000){
-    myOsc2.freq = 554.37;
-  } else if ((temptime % 2000) < 1250){
-    myOsc2.freq = 440;
-  } else if ((temptime % 2000) < 1500){
-    myOsc2.freq = 587.33;
-  } else if ((temptime % 2000) < 1750){
-    myOsc2.freq = 739.99;
-  } else {
-    myOsc2.freq = 587.33;
-  }
+    //sequence arp
+    if (msTime > arpTime){
+      arp.freq = arpFreq[arpPointer];
+      arpPointer = (arpPointer + 1) % (sizeof(arpFreq) / sizeof(float));
+      arpTime = millis() + arpDur;
+    }
+    //sequence frequencies
+//    if ((temptime % 2000) > 1000) {
+//      myOsc.freq = 220;
+//    } else {
+//      myOsc.freq = 293.66;
+//    }
+//  
+//    if ((temptime % 2000) < 250) {
+//      myOsc2.freq = 440;
+//    } else if ((temptime % 2000) < 500){
+//      myOsc2.freq = 554.37;
+//    } else if ((temptime % 2000) < 750){
+//      myOsc2.freq = 659.25;
+//    } else if ((temptime % 2000) < 1000){
+//      myOsc2.freq = 554.37;
+//    } else if ((temptime % 2000) < 1250){
+//      myOsc2.freq = 440;
+//    } else if ((temptime % 2000) < 1500){
+//      myOsc2.freq = 587.33;
+//    } else if ((temptime % 2000) < 1750){
+//      myOsc2.freq = 739.99;
+//    } else {
+//      myOsc2.freq = 587.33;
+//    }
   }
   
   
