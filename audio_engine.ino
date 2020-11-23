@@ -144,24 +144,3 @@ void loop()
   }
   
 }
-
-void playSine(float freq, float len){
-  float pointerInc = tableSize * (freq / sampleHz); //set pointer to increment to generate desired frequency S = N * (f/Fs) 
-  float pointerVal = 0;
-  int goalTime = millis() + len;           //length of tone to be played
-  while (millis() < goalTime){             //check if length has been reached
-    int outVal;               
-    if ((pointerVal - floor(pointerVal)) == 0){                //if pointerVal lands on an integer index use it
-      outVal = SineValues[(int)pointerVal];
-    } else {                               //if pointerVal lands between integer indexes, linearly interpolate the between adjacent samples
-      int lower = SineValues[(int)floor(pointerVal)];                        //sample on lower side
-      int upper = SineValues[(int)ceil(pointerVal)];                        //sample on higher side
-      float rem = (pointerVal - floor(pointerVal));
-      outVal = lower + (rem) * (upper - lower);
-    }
-    dacWrite(26, SineValues[(int)pointerVal]);
-    pointerVal += pointerInc;
-    if(pointerVal > tableSize) pointerVal -= tableSize;
-    delayMicroseconds(125);
-  }
-}
