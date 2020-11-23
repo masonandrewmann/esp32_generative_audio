@@ -9,6 +9,26 @@ float usInc = 6;
 int usTime = 0;
 int zeroCounter = 0;
 
+// hardware timer stuff from ESP32 RepeatTimer example 
+hw_timer_t * timer = NULL;
+volatile SemaphoreHandle_t timerSemaphore;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+
+volatile uint32_t isrCounter = 0;
+volatile uint32_t lastIsrAt = 0;
+
+void IRAM_ATTR onTimer(){
+  // Increment the counter and set the time of ISR
+  portENTER_CRITICAL_ISR(&timerMux);
+  isrCounter++;
+  lastIsrAt = millis();
+  portEXIT_CRITICAL_ISR(&timerMux);
+  // Give a semaphore that we can check in the loop
+  xSemaphoreGiveFromISR(timerSemaphore, NULL);
+  // It is safe to use digitalRead/Write here if you want to toggle an output
+}
+
+
 class SinOsc {
   //wavetable oscillator with linear interpolation
   //1024 samples played at sample rate of 8000Hz
@@ -36,15 +56,9 @@ class SinOsc {
         int lower = SineValues[(int)floor(pointerVal)];                        //sample on lower side
         int upper = SineValues[(int)ceil(pointerVal)];                        //sample on higher side
         float rem = (pointerVal - (int)floor(pointerVal));
-//        Serial.println(rem);
-//        outVal = lower + (rem) * (upper - lower);
         outVal = (rem - 0)*(upper - lower) / (1 - 0) + lower;
         if (outVal > 300) outVal = lower;
-//        Serial.println(outVal);
-//        outVal = lower;
         }
-//        outVal = SineValues[(int)pointerVal];
-  //      dacWrite(26, outVal * mul);
         outputVal = outputVal + mul * (outVal - 128);
         
         pointerVal += pointerInc;
@@ -60,6 +74,25 @@ void setup()
 {
   Serial.begin(115200);
 
+  // Create semaphore to inform us when the timer has fired
+  timerSemaphore = xSemaphoreCreateBinary();
+
+  // Use 1st timer of 4 (counted from zero).
+  // Set 80 divider for prescaler (see ESP32 Technical Reference Manual for more
+  // info).
+  timer = timerBegin(0, 80, true);
+
+  // Attach onTimer function to our timer.
+  timerAttachInterrupt(timer, &onTimer, true);
+
+  // Set alarm to call onTimer function every second (value in microseconds).
+  // Repeat the alarm (third parameter)
+  timerAlarmWrite(timer, 125, true);
+
+  // Start an alarm
+  timerAlarmEnable(timer);
+
+  //old timing stuff
   usInc = (1.0 / sampleHz) * pow(10, 6);
   // calculate sine values
   float RadAngle;                           // Angle in Radians
@@ -71,13 +104,13 @@ void setup()
  
 void loop()
 {
-  if ( micros() > usTime){
+  if (xSemaphoreTake(timerSemaphore, 0) == pdTRUE){
     //reset output value
     outputVal = 0;
   
     //cycle oscillators
     myOsc.cycle();
-//    myOsc2.cycle();
+    myOsc2.cycle();
   
     //write output to pin
     outputVal += 128;
@@ -90,31 +123,32 @@ void loop()
     usTime = micros() + usInc;
   }
 
-
+  int temptime = millis();
+  
   //sequence frequencies
-//  if ((millis() % 2000) > 1000) {
-//    myOsc.freq = 220;
-//  } else {
-//    myOsc.freq = 293.66;
-//  }
-//
-//  if ((millis() % 2000) < 250) {
-//    myOsc2.freq = 440;
-//  } else if ((millis() % 2000) < 500){
-//    myOsc2.freq = 554.37;
-//  } else if ((millis() % 2000) < 750){
-//    myOsc2.freq = 659.25;
-//  } else if ((millis() % 2000) < 1000){
-//    myOsc2.freq = 554.37;
-//  } else if ((millis() % 2000) < 1250){
-//    myOsc2.freq = 440;
-//  } else if ((millis() % 2000) < 1500){
-//    myOsc2.freq = 587.33;
-//  } else if ((millis() % 2000) < 1750){
-//    myOsc2.freq = 739.99;
-//  } else {
-//    myOsc2.freq = 587.33;
-//  }
+  if ((temptime % 2000) > 1000) {
+    myOsc.freq = 220;
+  } else {
+    myOsc.freq = 293.66;
+  }
+
+  if ((temptime % 2000) < 250) {
+    myOsc2.freq = 440;
+  } else if ((temptime % 2000) < 500){
+    myOsc2.freq = 554.37;
+  } else if ((temptime % 2000) < 750){
+    myOsc2.freq = 659.25;
+  } else if ((temptime % 2000) < 1000){
+    myOsc2.freq = 554.37;
+  } else if ((temptime % 2000) < 1250){
+    myOsc2.freq = 440;
+  } else if ((temptime % 2000) < 1500){
+    myOsc2.freq = 587.33;
+  } else if ((temptime % 2000) < 1750){
+    myOsc2.freq = 739.99;
+  } else {
+    myOsc2.freq = 587.33;
+  }
   
 }
 
