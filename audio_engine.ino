@@ -35,10 +35,15 @@ class SinOsc {
         } else {                               //if pointerVal lands between integer indexes, linearly interpolate the between adjacent samples
         int lower = SineValues[(int)floor(pointerVal)];                        //sample on lower side
         int upper = SineValues[(int)ceil(pointerVal)];                        //sample on higher side
-        float rem = (pointerVal - floor(pointerVal));
-        outVal = lower + (rem) * (upper - lower);
+        float rem = (pointerVal - (int)floor(pointerVal));
+//        Serial.println(rem);
+//        outVal = lower + (rem) * (upper - lower);
+        outVal = (rem - 0)*(upper - lower) / (1 - 0) + lower;
+        if (outVal > 300) outVal = lower;
+//        Serial.println(outVal);
+//        outVal = lower;
         }
-        outVal = SineValues[(int)pointerVal];
+//        outVal = SineValues[(int)pointerVal];
   //      dacWrite(26, outVal * mul);
         outputVal = outputVal + mul * (outVal - 128);
         
@@ -48,12 +53,12 @@ class SinOsc {
 };
 
 //make a test oscillator
-  SinOsc myOsc(440, 0.6);
+  SinOsc myOsc(220, 0.6);
   SinOsc myOsc2(554.37, 0.3);
   
 void setup()
 {
-//  Serial.begin(115200);
+  Serial.begin(115200);
 
   usInc = (1.0 / sampleHz) * pow(10, 6);
   // calculate sine values
