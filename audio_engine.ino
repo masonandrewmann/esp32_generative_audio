@@ -6,8 +6,6 @@ int sineCounter = 0;
 
 float outputVal = 0;
 float usInc = 6;
-int usTime = 0;
-int zeroCounter = 0;
 
 // hardware timer stuff from ESP32 RepeatTimer example 
 hw_timer_t * timer = NULL;
@@ -87,13 +85,11 @@ void setup()
 
   // Set alarm to call onTimer function every second (value in microseconds).
   // Repeat the alarm (third parameter)
-  timerAlarmWrite(timer, 125, true);
+  timerAlarmWrite(timer, (1.0 / sampleHz) * pow(10, 6), true);
 
   // Start an alarm
   timerAlarmEnable(timer);
 
-  //old timing stuff
-  usInc = (1.0 / sampleHz) * pow(10, 6);
   // calculate sine values
   float RadAngle;                           // Angle in Radians
   for(int MyAngle=0;MyAngle<tableSize;MyAngle++) {
@@ -114,13 +110,10 @@ void loop()
   
     //write output to pin
     outputVal += 128;
-    if (outputVal == 0)       zeroCounter++;
     if (outputVal < 0) {
       outputVal = 0;
     } else if (outputVal > 255) outputVal = 255;
     dacWrite(26, outputVal);
-
-    usTime = micros() + usInc;
   }
 
   int temptime = millis();
