@@ -1,6 +1,8 @@
 #define TABLESIZE 1024
 #define SAMPLEHZ 44100
 
+#include "effect_envelope.h"
+
 int SineValues[TABLESIZE];       // an array to store our values for sine
 int sineCounter = 0;
 
@@ -107,6 +109,40 @@ class Sequencer {
         goalTime = msTime + dur;
       }
     }
+};
+
+
+class EnvGen {
+  // series of volume levels (between 0 and 1), length  of time between them (int milliseconds), and number of levels
+  private:
+    float destTime;
+    int numLevels;
+    int currLevel;
+    int startTime;
+  public:
+    float *levels;
+    float *times;
+    float currVol;
+  EnvGen( float *levels, float *times, int numLevels){
+    this->levels = levels;
+    this->times = times;
+    this->numLevels = numLevels;
+    destTime = *times;
+    currLevel = 0;
+    currVol = *levels;
+    startTime = millis();
+  }
+
+  void cycle(){
+    if(millis() > startTime + *times){
+      times++;
+      levels++;
+      if(currLevel > (numLevels - 1)){
+        EXIT
+      }
+    }
+    currVol = (millis() - startTime)*(*(levels + 1) - *levels) / ((startTime + *times) - startTime) + *levels;
+  }
 };
 
 //pattern sequencing
