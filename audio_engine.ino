@@ -86,11 +86,11 @@ class Sequencer {
     int valPointer;
     int goalTime;
   public:
-    float vals[];
+    float *vals;
     float dur;
     float currVal;
 
-    Sequencer(float vals[], float dur){
+    Sequencer(float *vals, float dur){
       this->vals = vals;
 //      std::vector<float>
       this->dur = dur;
@@ -104,7 +104,7 @@ class Sequencer {
       if (msTime > goalTime){
         currVal = vals[valPointer];
         valPointer = (valPointer + 1) % (sizeof(vals) / sizeof(float));
-        goalTime = msTime() + dur;
+        goalTime = msTime + dur;
       }
     }
 };
