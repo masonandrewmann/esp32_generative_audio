@@ -194,7 +194,7 @@ class Sequencer {
       if (msTime > goalTime){
         valNumber = (valNumber + 1) % valsLen;
         currVal = *(vals + valNumber);
-        goalTime = msTime + dur;
+        goalTime += dur;
 //        trig = true;
           destEnv->trig = true;
       }
