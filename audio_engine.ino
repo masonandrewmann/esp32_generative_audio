@@ -53,12 +53,14 @@ class SinOsc {
     float freq;
     float mul;
     int outVal;
+    float envGain;
     
     SinOsc(float freq, float phase, float mul){
       this->freq = freq;
       this->mul = mul;
       pointerInc = TABLESIZE * (freq / SAMPLEHZ);
       pointerVal = map(phase, 0, TWO_PI, 0, TABLESIZE - 1);
+      envGain = 1;
     }
 
     void cycle(){
@@ -72,7 +74,7 @@ class SinOsc {
         outVal = (rem - 0)*(upper - lower) / (1 - 0) + lower;
         if (outVal > 300) outVal = lower;
         }
-        outputVal = outputVal + mul * (outVal - 128);
+        outputVal = outputVal + mul * envGain * (outVal - 128);
         
         pointerVal += pointerInc;
         if(pointerVal > TABLESIZE) pointerVal -= TABLESIZE;
@@ -157,7 +159,7 @@ class EnvGen {
         currVol = 0;
       }
     }
-    destOsc->mul = currVol;
+    destOsc->envGain = currVol;
   }
 };
 
