@@ -29,7 +29,6 @@ void IRAM_ATTR onTimerAr(){
   portEXIT_CRITICAL_ISR(&timerMux);
   // Give a semaphore that we can check in the loop
   xSemaphoreGiveFromISR(timerSemaphoreAr, NULL);
-  // It is safe to use digitalRead/Write here if you want to toggle an output
 }
 
 
@@ -41,7 +40,6 @@ void IRAM_ATTR onTimerKr(){
   portEXIT_CRITICAL_ISR(&timerMux);
   // Give a semaphore that we can check in the loop
   xSemaphoreGiveFromISR(timerSemaphoreKr, NULL);
-  // It is safe to use digitalRead/Write here if you want to toggle an output
 }
 
 class SinOsc {
@@ -81,41 +79,6 @@ class SinOsc {
     }
 };
 
-class Sequencer {
-  private:
-    int valNumber;
-    int valsLen;
-    int goalTime;
-  public:
-    float *vals;
-    float dur;
-    float currVal;
-    boolean trig;
-
-    Sequencer(float *vals, float dur, int valsLen){
-      this->vals = vals;
-      this->dur = dur;
-      this->valsLen = valsLen;
-      currVal = *vals;
-      valNumber = 0;
-      goalTime = 0;
-      trig = true;
-    }
-
-    void cycle(){
-//      Serial.print("freq: ");
-//      Serial.println(currVal);
-      int msTime = millis();
-      if (msTime > goalTime){
-        valNumber = (valNumber + 1) % valsLen;
-        currVal = *(vals + valNumber);
-        goalTime = msTime + dur;
-        trig = true;
-      }
-    }
-};
-
-
 class EnvGen {
   // linear interpolating envelope generator of any length
   // series of volume levels (between 0 and 1), length  of time between them (in milliseconds), and number of levels
@@ -130,10 +93,12 @@ class EnvGen {
     float currVol;
     boolean active;
     boolean trig;
-  EnvGen( float *levels, float *times, int numStates){
+    SinOsc* destOsc;
+  EnvGen( float *levels, float *times, int numStates, SinOsc* destOsc){
     this->levels = levels;
     this->times = times;
     this->numStates = numStates;
+    this->destOsc = destOsc;
     state = 0;
     startTime = millis();
     nextTime = startTime + *(times + state);
@@ -192,37 +157,77 @@ class EnvGen {
         currVol = 0;
       }
     }
+    destOsc->mul = currVol;
   }
 };
+
+class Sequencer {
+  private:
+    int valNumber;
+    int valsLen;
+    int goalTime;
+    EnvGen* destEnv;
+  public:
+    float *vals;
+    float dur;
+    float currVal;
+    boolean trig;
+
+    Sequencer(float *vals, float dur, int valsLen, EnvGen* destEnv){
+      this->vals = vals;
+      this->dur = dur;
+      this->valsLen = valsLen;
+      this->destEnv = destEnv;
+      currVal = *vals;
+      valNumber = 0;
+      goalTime = 0;
+//      trig = true;
+        destEnv->trig = true;
+    }
+
+    void cycle(){
+//      Serial.print("freq: ");
+//      Serial.println(currVal);
+      int msTime = millis();
+      if (msTime > goalTime){
+        valNumber = (valNumber + 1) % valsLen;
+        currVal = *(vals + valNumber);
+        goalTime = msTime + dur;
+//        trig = true;
+          destEnv->trig = true;
+      }
+      destEnv->destOsc->freq = currVal;
+    }
+};
+
 
 //pattern sequencing
 
   float arpFreq[] = {440, 554.37, 659.25, 554.37, 440, 587.33, 739.99, 587.33};
-  float arpDur = 1000;
-  int arpPointer = 0;
-  int arpTime = 0;
+  float arpDur = 250;
 
   float bassFreq[] = {220, 293.66};
   float bassDur = 1000;
-  int bassPointer = 0;
-  int bassTime = 0;
-
-  //tigger timer
-  int trigTime = 5000;
   
-//make a test oscillator
-  SinOsc bass(440, 1, 0.6);
-  SinOsc arp(554.37, 1, 0.3);
 
 //envelopes for each oscillator
   float bassLevels[] = {0, 1, 0.5, 0.5, 0};
-//  float bassTimes[] = {5, 50, 500, 300};
-float bassTimes[] = {300, 500, 50, 5};
-  byte bassNumLev = 5;
-  EnvGen bassEnv(bassLevels, bassTimes, bassNumLev);
+  float bassTimes[] = {5, 50, 500, 300};
 
-  Sequencer bassSeq(arpFreq, arpDur, sizeof(arpFreq)/sizeof(float));
-//  Sequencer arpSeq(arpFreq, arpDur);/
+  float arpLevels[] = {0, 1, 0.5, 0.5, 0};
+  float arpTimes[] = {5, 50, 100, 200};
+  
+  //make oscillators
+  SinOsc bass(440, 1, 0.6);
+  SinOsc arp(554.37, 1, 0.3);
+
+  //make envelopes
+  EnvGen bassEnv(bassLevels, bassTimes, sizeof(bassLevels)/sizeof(float), &bass);
+  EnvGen arpEnv(arpLevels, arpTimes, sizeof(arpLevels)/sizeof(float), &arp);
+
+  //make sequencers
+  Sequencer bassSeq(bassFreq, bassDur, sizeof(bassFreq)/sizeof(float), &bassEnv);
+  Sequencer arpSeq(arpFreq, arpDur, sizeof(arpFreq)/sizeof(float), &arpEnv);
 
 
   
@@ -244,21 +249,16 @@ void loop()
 {
     //CONTROL RATE CALCULATIONS
   if (xSemaphoreTake(timerSemaphoreKr, 0) == pdTRUE){
-    
-//    arpSeq.cycle();
-    bassSeq.cycle();
-    if (bassSeq.trig){
-      bassSeq.trig = false;
-      bassEnv.trig = true;
-    }
 
-//    arp.freq = arpSeq.currVal;
-    bass.freq = bassSeq.currVal;
+    bassSeq.cycle();
+    arpSeq.cycle();
+
     
     //envelope oscillators
     bassEnv.cycle();
-    float bassGain = bassEnv.currVol;
-    bass.mul = bassGain;
+    arpEnv.cycle();
+//    float bassGain = bassEnv.currVol;
+//    bass.mul = bassGain;
   }
   
   //AUDIO RATE CALCULATIONS
@@ -269,7 +269,7 @@ void loop()
 
     //cycle oscillators
     bass.cycle();
-//    arp.cycle();
+    arp.cycle();
   
     //write output to pin
     writeOutput(26, outputVal);
