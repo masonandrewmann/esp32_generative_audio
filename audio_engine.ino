@@ -1,16 +1,6 @@
 #define TABLESIZE 1024
 #define SAMPLEHZ 44100
 
-#define STATE_IDLE  0
-#define STATE_DELAY 1
-#define STATE_ATTACK  2
-#define STATE_HOLD  3
-#define STATE_DECAY 4
-#define STATE_SUSTAIN 5
-#define STATE_RELEASE 6
-#define STATE_FORCED  7
-
-//#include "effect_envelope.h"
 
 int SineValues[TABLESIZE];       // an array to store our values for sine
 int sineCounter = 0;
@@ -75,7 +65,6 @@ class SinOsc {
 
     void cycle(){
         pointerInc = TABLESIZE * (freq / SAMPLEHZ);
-//        println(pointerInc);
          if ((pointerVal - floor(pointerVal)) == 0){                //if pointerVal lands on an integer index use it
         outVal = SineValues[(int)pointerVal];
         } else {                               //if pointerVal lands between integer indexes, linearly interpolate the between adjacent samples
@@ -110,7 +99,7 @@ class Sequencer {
       currVal = *vals;
       valNumber = 0;
       goalTime = 0;
-      trig = false;
+      trig = true;
     }
 
     void cycle(){
@@ -202,9 +191,6 @@ class EnvGen {
       } else if (currVol < 0){
         currVol = 0;
       }
-
-//      currVol = 1;
-//      currVol = startLevel + (nextLevel - startLevel) * ( (millis() - startTime) / (nextTime - startTime) );
     }
   }
 };
@@ -244,44 +230,21 @@ void setup()
 {
 //  Serial.begin(9600);
 
-  // Create semaphore to inform us when the timer has fired
-  timerSemaphoreAr = xSemaphoreCreateBinary();
-  timerSemaphoreKr = xSemaphoreCreateBinary();
-
-  // Use 1st timer of 4 (counted from zero).
-  // Set 80 divider for prescaler (see ESP32 Technical Reference Manual for more
-  // info).
-  timerAr = timerBegin(0, 80, true);
-  timerKr = timerBegin(1, 80, true);
-
-  // Attach onTimerAr function to our timer.
-  timerAttachInterrupt(timerAr, &onTimerAr, true);
-  timerAttachInterrupt(timerKr, &onTimerKr, true);
-
-  // Set alarm to call onTimerAr function every second (value in microseconds).
-  // Repeat the alarm (third parameter)
-  timerAlarmWrite(timerAr, (1.0 / SAMPLEHZ) * pow(10, 6), true); //poll at sample rate
-  timerAlarmWrite(timerKr, (1.0 / 100) * pow(10, 6), true);      // 125Hz control rate
-
-  // Start an alarm
-  timerAlarmEnable(timerAr);
-  timerAlarmEnable(timerKr);
-
-  // calculate sine values
+  timerSetup(); //set up audio and control rate clocks
+  
+  // calculate sine wavetable
   float RadAngle;                           // Angle in Radians
   for(int MyAngle=0;MyAngle<TABLESIZE;MyAngle++) {
     RadAngle=MyAngle*(2*PI)/TABLESIZE;               // angle converted to radians
     SineValues[MyAngle]=(sin(RadAngle)*127)+128;  // get the sine of this angle and 'shift' to center around the middle of output voltage range
   }
-
-  //trigger test oscillator envelope
-  bassEnv.trig = true;
 }
  
 void loop()
 {
     //CONTROL RATE CALCULATIONS
   if (xSemaphoreTake(timerSemaphoreKr, 0) == pdTRUE){
+    
 //    arpSeq.cycle();
     bassSeq.cycle();
     if (bassSeq.trig){
@@ -320,4 +283,29 @@ void writeOutput(byte pin, float outputValue){
       outputValue = 0;
     } else if (outputValue > 255) outputValue = 255;
     dacWrite(pin, outputValue);
+}
+
+void timerSetup(){
+  // Create semaphore to inform us when the timer has fired
+  timerSemaphoreAr = xSemaphoreCreateBinary();
+  timerSemaphoreKr = xSemaphoreCreateBinary();
+
+  // Use 1st timer of 4 (counted from zero).
+  // Set 80 divider for prescaler (see ESP32 Technical Reference Manual for more
+  // info).
+  timerAr = timerBegin(0, 80, true);
+  timerKr = timerBegin(1, 80, true);
+
+  // Attach onTimerAr function to our timer.
+  timerAttachInterrupt(timerAr, &onTimerAr, true);
+  timerAttachInterrupt(timerKr, &onTimerKr, true);
+
+  // Set alarm to call onTimerAr function every second (value in microseconds).
+  // Repeat the alarm (third parameter)
+  timerAlarmWrite(timerAr, (1.0 / SAMPLEHZ) * pow(10, 6), true); //poll at sample rate
+  timerAlarmWrite(timerKr, (1.0 / 100) * pow(10, 6), true);      // 125Hz control rate
+
+  // Start an alarm
+  timerAlarmEnable(timerAr);
+  timerAlarmEnable(timerKr);
 }
