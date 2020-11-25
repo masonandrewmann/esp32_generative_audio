@@ -6,7 +6,7 @@ int SineValues[TABLESIZE];       // an array to store our values for sine
 //pattern sequencing
 
   float arpFreq[] = {440, 554.37, 659.25, 554.37, 440, 587.33, 739.99, 587.33};
-  float arpDur = 250;
+  float arpDur = 500;
  
   float bassFreq[] = {220, 293.66};
   float bassDur = 1000;

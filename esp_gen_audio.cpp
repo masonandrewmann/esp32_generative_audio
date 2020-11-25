@@ -3,9 +3,6 @@
 
 float outputVal = 0;
 
-
-float usInc = 6;
-
 // hardware timer stuff from ESP32 RepeatTimer example 
 
 hw_timer_t * timerAr = NULL;
