@@ -1,7 +1,16 @@
 #define TABLESIZE 1024
 #define SAMPLEHZ 44100
 
-#include "effect_envelope.h"
+#define STATE_IDLE  0
+#define STATE_DELAY 1
+#define STATE_ATTACK  2
+#define STATE_HOLD  3
+#define STATE_DECAY 4
+#define STATE_SUSTAIN 5
+#define STATE_RELEASE 6
+#define STATE_FORCED  7
+
+//#include "effect_envelope.h"
 
 int SineValues[TABLESIZE];       // an array to store our values for sine
 int sineCounter = 0;
@@ -113,35 +122,84 @@ class Sequencer {
 
 
 class EnvGen {
-  // series of volume levels (between 0 and 1), length  of time between them (int milliseconds), and number of levels
+  // linear interpolating envelope generator of any length
+  // series of volume levels (between 0 and 1), length  of time between them (in milliseconds), and number of levels
   private:
-    float destTime;
-    int numLevels;
-    int currLevel;
-    int startTime;
+    int numStates;
+    int state;
+    float startTime;
+    float nextTime;
   public:
     float *levels;
     float *times;
     float currVol;
-  EnvGen( float *levels, float *times, int numLevels){
+    boolean active;
+    boolean trig;
+  EnvGen( float *levels, float *times, int numStates){
     this->levels = levels;
     this->times = times;
-    this->numLevels = numLevels;
-    destTime = *times;
-    currLevel = 0;
-    currVol = *levels;
+    this->numStates = numStates;
+    state = 0;
     startTime = millis();
+    nextTime = startTime + *(times + state);
+    currVol = 0;
+    active = false;
+    trig = false;
   }
 
   void cycle(){
-    if(millis() > startTime + *times){
-      times++;
-      levels++;
-      if(currLevel > (numLevels - 1)){
-        EXIT
+//        Serial.print("Gain: ");
+//    Serial.println(currVol);
+    if (trig){
+      active = true;
+      trig = false;
+      state = 0;
+      startTime = millis();
+      nextTime = startTime + *(times + state);
+    }
+    //determine current state
+    if ( active && millis() > nextTime){
+      //go to next state
+      state++;
+      startTime = millis();
+      nextTime = startTime + *(times + state);
+      if ( state >= numStates - 1){
+        active = false;
+        currVol = *(levels + state);
       }
     }
-    currVol = (millis() - startTime)*(*(levels + 1) - *levels) / ((startTime + *times) - startTime) + *levels;
+    if (active){
+      float startLevel = *(levels + state);
+      float nextLevel = *(levels + state + 1);
+      
+//    Serial.print("State: ");
+//    Serial.println(state);
+//    Serial.print("active?:");
+//    Serial.println(active);
+//    Serial.print("Gain: ");
+//    Serial.println(currVol);
+//    Serial.print("startTime: ");
+//    Serial.println(startTime);
+//    Serial.print("nextTime: ");
+//    Serial.println(nextTime);
+//    Serial.print("startLevel: ");
+//    Serial.println(startLevel);
+//    Serial.print("nextLevel: ");
+//    Serial.println(nextLevel);
+//    Serial.print("currTime: ");
+//    Serial.println(millis());
+//    Serial.println();
+      //calculate output gain
+      currVol = (millis() - startTime) * (nextLevel - startLevel) / (nextTime - startTime) + startLevel;
+      if (currVol > 1){
+        currVol = 1;
+      } else if (currVol < 0){
+        currVol = 0;
+      }
+
+//      currVol = 1;
+//      currVol = startLevel + (nextLevel - startLevel) * ( (millis() - startTime) / (nextTime - startTime) );
+    }
   }
 };
 
@@ -156,10 +214,19 @@ class EnvGen {
   float bassDur = 1000;
   int bassPointer = 0;
   int bassTime = 0;
+
+  //tigger timer
+  int trigTime = 5000;
   
 //make a test oscillator
-  SinOsc bass(220, 1, 0.6);
+  SinOsc bass(440, 1, 0.6);
   SinOsc arp(554.37, 1, 0.3);
+
+//envelopes for each oscillator
+  float bassLevels[] = {0, 1, 0.5, 0.5, 0};
+  float bassTimes[] = {100, 50, 1000, 2000};
+  byte bassNumLev = 5;
+  EnvGen bassEnv(bassLevels, bassTimes, bassNumLev);
 
   Sequencer bassSeq(bassFreq, bassDur);
   Sequencer arpSeq(arpFreq, arpDur);
@@ -168,7 +235,7 @@ class EnvGen {
   
 void setup()
 {
-  Serial.begin(115200);
+//  Serial.begin(9600);
 
   // Create semaphore to inform us when the timer has fired
   timerSemaphoreAr = xSemaphoreCreateBinary();
@@ -200,34 +267,19 @@ void setup()
     SineValues[MyAngle]=(sin(RadAngle)*127)+128;  // get the sine of this angle and 'shift' to center around the middle of output voltage range
   }
 
+  //trigger test oscillator envelope
+  bassEnv.trig = true;
 }
  
 void loop()
 {
-  //AUDIO RATE CALCULATIONS
-  if (xSemaphoreTake(timerSemaphoreAr, 0) == pdTRUE){
-    //reset output value
-    outputVal = 0;
-  
-    //cycle oscillators
-    bass.cycle();
-    arp.cycle();
-  
-    //write output to pin
-    outputVal += 128;
-    if (outputVal < 0) {
-      outputVal = 0;
-    } else if (outputVal > 255) outputVal = 255;
-    dacWrite(26, outputVal);
-  }
-
-  //CONTROL RATE CALCULATIONS
+    //CONTROL RATE CALCULATIONS
   if (xSemaphoreTake(timerSemaphoreKr, 0) == pdTRUE){
     arpSeq.cycle();
     bassSeq.cycle();
 
-    arp.freq = arpSeq.currVal;
-    bass.freq = bassSeq.currVal;
+//    arp.freq = arpSeq.currVal;
+//    bass.freq = bassSeq.currVal;
     
 //    int msTime = millis();
 //    //sequence bass
@@ -243,7 +295,38 @@ void loop()
 //      arpPointer = (arpPointer + 1) % (sizeof(arpFreq) / sizeof(float));
 //      arpTime = millis() + arpDur;
 //    }
+    //envelope oscillators
+    bassEnv.cycle();
+    float bassGain = bassEnv.currVol;
+    bass.mul = bassGain;
+
+    if (millis() > trigTime){
+      bassEnv.trig = true;
+      bass.freq = random(400, 1000);
+      trigTime = millis() + 5000;
+    }
   }
   
+  //AUDIO RATE CALCULATIONS
+  if (xSemaphoreTake(timerSemaphoreAr, 0) == pdTRUE){
+    //reset output value
+    outputVal = 0;
+
+
+    //cycle oscillators
+    bass.cycle();
+//    arp.cycle();
   
+    //write output to pin
+    writeOutput(26, outputVal);
+  }
+
+}
+
+void writeOutput(byte pin, float outputValue){
+    outputValue += 128;
+    if (outputValue < 0) {
+      outputValue = 0;
+    } else if (outputValue > 255) outputValue = 255;
+    dacWrite(pin, outputValue);
 }
