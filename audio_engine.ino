@@ -94,28 +94,34 @@ class SinOsc {
 
 class Sequencer {
   private:
-    int valPointer;
+    int valNumber;
+    int valsLen;
     int goalTime;
   public:
     float *vals;
     float dur;
     float currVal;
+    boolean trig;
 
-    Sequencer(float *vals, float dur){
+    Sequencer(float *vals, float dur, int valsLen){
       this->vals = vals;
-//      std::vector<float>
       this->dur = dur;
-      currVal = 0;
-      valPointer = 0;
+      this->valsLen = valsLen;
+      currVal = *vals;
+      valNumber = 0;
       goalTime = 0;
+      trig = false;
     }
 
     void cycle(){
+//      Serial.print("freq: ");
+//      Serial.println(currVal);
       int msTime = millis();
       if (msTime > goalTime){
-        currVal = vals[valPointer];
-        valPointer = (valPointer + 1) % (sizeof(vals) / sizeof(float));
+        valNumber = (valNumber + 1) % valsLen;
+        currVal = *(vals + valNumber);
         goalTime = msTime + dur;
+        trig = true;
       }
     }
 };
@@ -206,7 +212,7 @@ class EnvGen {
 //pattern sequencing
 
   float arpFreq[] = {440, 554.37, 659.25, 554.37, 440, 587.33, 739.99, 587.33};
-  float arpDur = 250;
+  float arpDur = 1000;
   int arpPointer = 0;
   int arpTime = 0;
 
@@ -224,12 +230,13 @@ class EnvGen {
 
 //envelopes for each oscillator
   float bassLevels[] = {0, 1, 0.5, 0.5, 0};
-  float bassTimes[] = {100, 50, 1000, 2000};
+//  float bassTimes[] = {5, 50, 500, 300};
+float bassTimes[] = {300, 500, 50, 5};
   byte bassNumLev = 5;
   EnvGen bassEnv(bassLevels, bassTimes, bassNumLev);
 
-  Sequencer bassSeq(bassFreq, bassDur);
-  Sequencer arpSeq(arpFreq, arpDur);
+  Sequencer bassSeq(arpFreq, arpDur, sizeof(arpFreq)/sizeof(float));
+//  Sequencer arpSeq(arpFreq, arpDur);/
 
 
   
@@ -275,36 +282,20 @@ void loop()
 {
     //CONTROL RATE CALCULATIONS
   if (xSemaphoreTake(timerSemaphoreKr, 0) == pdTRUE){
-    arpSeq.cycle();
+//    arpSeq.cycle();
     bassSeq.cycle();
+    if (bassSeq.trig){
+      bassSeq.trig = false;
+      bassEnv.trig = true;
+    }
 
 //    arp.freq = arpSeq.currVal;
-//    bass.freq = bassSeq.currVal;
+    bass.freq = bassSeq.currVal;
     
-//    int msTime = millis();
-//    //sequence bass
-//    if (msTime > bassTime){
-//      bass.freq = bassFreq[bassPointer];
-//      bassPointer = (bassPointer + 1) % (sizeof(bassFreq) / sizeof(float));
-//      bassTime = millis() + bassDur;
-//    }
-//
-//    //sequence arp
-//    if (msTime > arpTime){
-//      arp.freq = arpFreq[arpPointer];
-//      arpPointer = (arpPointer + 1) % (sizeof(arpFreq) / sizeof(float));
-//      arpTime = millis() + arpDur;
-//    }
     //envelope oscillators
     bassEnv.cycle();
     float bassGain = bassEnv.currVol;
     bass.mul = bassGain;
-
-    if (millis() > trigTime){
-      bassEnv.trig = true;
-      bass.freq = random(400, 1000);
-      trigTime = millis() + 5000;
-    }
   }
   
   //AUDIO RATE CALCULATIONS
