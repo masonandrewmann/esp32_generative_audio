@@ -14,6 +14,20 @@
  */
 
 extern float outputVal;
+
+extern hw_timer_t * timerAr;
+extern hw_timer_t * timerKr;
+
+extern volatile SemaphoreHandle_t timerSemaphoreAr;
+extern volatile SemaphoreHandle_t timerSemaphoreKr;
+
+extern portMUX_TYPE timerMux;
+
+extern volatile uint32_t isrCounter;
+extern volatile uint32_t lastIsrAt;
+
+void IRAM_ATTR onTimerAr();
+void IRAM_ATTR onTimerKr();
  
 class SinOsc {
   //wavetable oscillator with linear interpolation
@@ -56,6 +70,7 @@ class EnvGen {
     boolean active;
     boolean trig;
     SinOsc* destOsc;
+    
   EnvGen( float *levels, float *times, int numStates, SinOsc* destOsc){
     this->levels = levels;
     this->times = times;
@@ -98,5 +113,9 @@ class Sequencer {
 
     void cycle();
 };
+
+void timerSetup();
+
+void writeOutput(byte pin, float outputValue);
 
 #endif

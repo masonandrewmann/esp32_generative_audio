@@ -1,43 +1,7 @@
 #include "esp_gen_audio.h"
 
 int SineValues[TABLESIZE];       // an array to store our values for sine
-int sineCounter = 0;
-
-float usInc = 6;
-
-// hardware timer stuff from ESP32 RepeatTimer example 
-
-hw_timer_t * timerAr = NULL;
-hw_timer_t * timerKr = NULL;
-
-volatile SemaphoreHandle_t timerSemaphoreAr;
-volatile SemaphoreHandle_t timerSemaphoreKr;
-
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
-
-volatile uint32_t isrCounter = 0;
-volatile uint32_t lastIsrAt = 0;
-
-void IRAM_ATTR onTimerAr(){
-  // Increment the counter and set the time of ISR
-  portENTER_CRITICAL_ISR(&timerMux);
-  isrCounter++;
-  lastIsrAt = millis();
-  portEXIT_CRITICAL_ISR(&timerMux);
-  // Give a semaphore that we can check in the loop
-  xSemaphoreGiveFromISR(timerSemaphoreAr, NULL);
-}
-
-
-void IRAM_ATTR onTimerKr(){
-  // Increment the counter and set the time of ISR
-  portENTER_CRITICAL_ISR(&timerMux);
-  isrCounter++;
-  lastIsrAt = millis();
-  portEXIT_CRITICAL_ISR(&timerMux);
-  // Give a semaphore that we can check in the loop
-  xSemaphoreGiveFromISR(timerSemaphoreKr, NULL);
-}
+//int sineCounter = 0;
 
 //pattern sequencing
 
@@ -110,37 +74,4 @@ void loop()
     writeOutput(26, outputVal);
   }
 
-}
-
-void writeOutput(byte pin, float outputValue){
-    outputValue += 128;
-    if (outputValue < 0) {
-      outputValue = 0;
-    } else if (outputValue > 255) outputValue = 255;
-    dacWrite(pin, outputValue);
-}
-
-void timerSetup(){
-  // Create semaphore to inform us when the timer has fired
-  timerSemaphoreAr = xSemaphoreCreateBinary();
-  timerSemaphoreKr = xSemaphoreCreateBinary();
-
-  // Use 1st timer of 4 (counted from zero).
-  // Set 80 divider for prescaler (see ESP32 Technical Reference Manual for more
-  // info).
-  timerAr = timerBegin(0, 80, true);
-  timerKr = timerBegin(1, 80, true);
-
-  // Attach onTimerAr function to our timer.
-  timerAttachInterrupt(timerAr, &onTimerAr, true);
-  timerAttachInterrupt(timerKr, &onTimerKr, true);
-
-  // Set alarm to call onTimerAr function every second (value in microseconds).
-  // Repeat the alarm (third parameter)
-  timerAlarmWrite(timerAr, (1.0 / SAMPLEHZ) * pow(10, 6), true); //poll at sample rate
-  timerAlarmWrite(timerKr, (1.0 / 100) * pow(10, 6), true);      // 125Hz control rate
-
-  // Start an alarm
-  timerAlarmEnable(timerAr);
-  timerAlarmEnable(timerKr);
 }
