@@ -207,7 +207,7 @@ class Sequencer {
 
   float arpFreq[] = {440, 554.37, 659.25, 554.37, 440, 587.33, 739.99, 587.33};
   float arpDur = 250;
-
+ 
   float bassFreq[] = {220, 293.66};
   float bassDur = 1000;
   
@@ -252,22 +252,19 @@ void loop()
     //CONTROL RATE CALCULATIONS
   if (xSemaphoreTake(timerSemaphoreKr, 0) == pdTRUE){
 
+    //cycle sequencers
     bassSeq.cycle();
     arpSeq.cycle();
-
     
-    //envelope oscillators
+    //cycle envelopes
     bassEnv.cycle();
     arpEnv.cycle();
-//    float bassGain = bassEnv.currVol;
-//    bass.mul = bassGain;
   }
   
   //AUDIO RATE CALCULATIONS
   if (xSemaphoreTake(timerSemaphoreAr, 0) == pdTRUE){
     //reset output value
     outputVal = 0;
-
 
     //cycle oscillators
     bass.cycle();
