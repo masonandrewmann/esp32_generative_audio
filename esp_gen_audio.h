@@ -13,8 +13,7 @@
  *               :~)
  */
 
-float outputVal = 0;
-
+extern float outputVal;
  
 class SinOsc {
   //wavetable oscillator with linear interpolation

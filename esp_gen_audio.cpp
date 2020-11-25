@@ -1,6 +1,8 @@
 #include "esp_gen_audio.h"
 #include <Arduino.h>
 
+float outputVal = 0;
+
 void SinOsc::cycle(){
         pointerInc = TABLESIZE * (freq / SAMPLEHZ);
         if ((pointerVal - floor(pointerVal)) == 0){                //if pointerVal lands on an integer index use it
