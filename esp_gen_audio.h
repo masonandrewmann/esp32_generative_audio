@@ -13,6 +13,7 @@
  *               :~)
  */
 
+float outputVal = 0;
 
  
 class SinOsc {
@@ -21,6 +22,7 @@ class SinOsc {
   private:
     float pointerInc;
     float pointerVal = 0;
+    int* table; 
     
   public:
     float freq;
@@ -28,16 +30,16 @@ class SinOsc {
     int outVal;
     float envGain;
     
-    SinOsc(float freq, float phase, float mul){
+    SinOsc(float freq, float phase, float mul, int* table){
       this->freq = freq;
       this->mul = mul;
+      this->table = table;
       pointerInc = TABLESIZE * (freq / SAMPLEHZ);
       pointerVal = map(phase, 0, TWO_PI, 0, TABLESIZE - 1);
       envGain = 1;
     }
     
-    void cycle(){
-    }
+    void cycle();
 };
 
 class EnvGen {
@@ -68,8 +70,7 @@ class EnvGen {
     trig = false;
   }
 
-  void cycle(){
-  }
+  void cycle();
 };
 
 class Sequencer {
@@ -96,8 +97,7 @@ class Sequencer {
         destEnv->trig = true;
     }
 
-    void cycle(){
-    }
+    void cycle();
 };
 
 #endif

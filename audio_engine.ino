@@ -3,7 +3,6 @@
 int SineValues[TABLESIZE];       // an array to store our values for sine
 int sineCounter = 0;
 
-float outputVal = 0;
 float usInc = 6;
 
 // hardware timer stuff from ESP32 RepeatTimer example 
@@ -57,8 +56,8 @@ void IRAM_ATTR onTimerKr(){
   float arpTimes[] = {5, 50, 100, 200};
   
   //make oscillators
-  SinOsc bass(440, 1, 0.6);
-  SinOsc arp(554.37, 1, 0.3);
+  SinOsc bass(440, 1, 0.6, SineValues);
+  SinOsc arp(554.37, 1, 0.3, SineValues);
 
   //make envelopes
   EnvGen bassEnv(bassLevels, bassTimes, sizeof(bassLevels)/sizeof(float), &bass);

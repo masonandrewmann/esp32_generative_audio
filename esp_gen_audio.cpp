@@ -1,13 +1,13 @@
 #include "esp_gen_audio.h"
 #include <Arduino.h>
 
-void SinOsc::cycle(void){
+void SinOsc::cycle(){
         pointerInc = TABLESIZE * (freq / SAMPLEHZ);
         if ((pointerVal - floor(pointerVal)) == 0){                //if pointerVal lands on an integer index use it
-          outVal = SineValues[(int)pointerVal];
+          outVal = *(table + (int)pointerVal);
         } else {                               //if pointerVal lands between integer indexes, linearly interpolate the between adjacent samples
-          int lower = SineValues[(int)floor(pointerVal)];                        //sample on lower side
-          int upper = SineValues[(int)ceil(pointerVal)];                        //sample on higher side
+          int lower = *(table + (int)floor(pointerVal));                        //sample on lower side
+          int upper = *(table + (int)ceil(pointerVal));                        //sample on higher side
           float rem = (pointerVal - (int)floor(pointerVal));
           outVal = (rem - 0)*(upper - lower) / (1 - 0) + lower;
           if (outVal > 300) outVal = lower;
