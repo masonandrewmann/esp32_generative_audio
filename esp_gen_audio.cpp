@@ -155,3 +155,8 @@ void IRAM_ATTR onTimerKr(){
   // Give a semaphore that we can check in the loop
   xSemaphoreGiveFromISR(timerSemaphoreKr, NULL);
 }
+
+float eqTempHz(float referenceF, float chromInt){
+  float noteF = pow(2, chromInt/12) * referenceF;
+  return noteF;
+}

@@ -28,7 +28,9 @@ extern volatile uint32_t lastIsrAt;
 
 void IRAM_ATTR onTimerAr();
 void IRAM_ATTR onTimerKr();
- 
+
+float eqTempHz(float fund, float chromInt);
+
 class SinOsc {
   //wavetable oscillator with linear interpolation
   //1024 samples played at sample rate of 8000Hz
